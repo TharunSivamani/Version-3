@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Emoji Text Replacer",
+  "version": "1.0",
+  "description": "Replace random text with emojis on the page",
+  "permissions": ["activeTab", "storage"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
+}
