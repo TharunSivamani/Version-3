@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Simple Stock Trends",
+  "version": "1.0",
+  "description": "Display stock trends using Yahoo Finance API",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost:5000/*"
+  ]
+}
