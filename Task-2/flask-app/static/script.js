@@ -1,28 +1,41 @@
 document.addEventListener('DOMContentLoaded', () => {
     const animalRadios = document.querySelectorAll('input[name="animal"]');
     const animalImage = document.getElementById('animal-image');
+    const fileInput = document.getElementById('file-upload');
+    const fileInfo = document.getElementById('file-info');
 
     animalRadios.forEach(radio => {
         radio.addEventListener('change', fetchAnimalImage);
     });
+
+    // Add event listener for file selection
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (file) {
+            fileInfo.innerHTML = `<p>Selected file: ${file.name}</p>`;
+        } else {
+            fileInfo.innerHTML = '';
+        }
+    });
 });
 
-function fetchAnimalImage() {
+async function fetchAnimalImage() {
     const animal = document.querySelector('input[name="animal"]:checked').value;
     const animalImage = document.getElementById('animal-image');
 
-    let imageUrl = `/images/${animal}.jpg`;
+    try {
+        const response = await fetch(`/check-image/${animal}`);
+        const data = await response.json();
 
-    animalImage.innerHTML = `<img src="${imageUrl}" alt="${animal}">`;
-    
-    const img = animalImage.querySelector('img');
-    img.addEventListener('load', () => {
-        console.log('Image loaded successfully');
-    });
-    img.addEventListener('error', () => {
-        console.error('Error loading image');
-        animalImage.innerHTML = '<p>Error loading image. Please try again.</p>';
-    });
+        if (data.exists) {
+            animalImage.innerHTML = `<img src="/images/${animal}.jpg" alt="${animal}">`;
+        } else {
+            animalImage.innerHTML = `<p class="error">Image not found for ${animal}</p>`;
+        }
+    } catch (error) {
+        console.error('Error fetching image:', error);
+        animalImage.innerHTML = '<p class="error">Error loading image. Please try again.</p>';
+    }
 }
 
 function uploadFile() {
@@ -34,6 +47,8 @@ function uploadFile() {
         fileInfo.innerHTML = '<p class="error">Please select a file.</p>';
         return;
     }
+
+    fileInfo.innerHTML = `<p>Analyzing file: ${file.name}</p>`;
 
     const formData = new FormData();
     formData.append('file', file);
@@ -50,7 +65,7 @@ function uploadFile() {
             fileInfo.innerHTML = `
                 <h3>File Analysis</h3>
                 <p><strong>Name:</strong> ${data.name}</p>
-                <p><strong>Size:</strong> ${formatFileSize(data.size)}</p>
+                <p><strong>Size:</strong> ${data.size}</p>
                 <p><strong>Type:</strong> ${data.type}</p>
                 <p><strong>Potential Uses:</strong> ${suggestUses(data.type)}</p>
             `;
@@ -60,19 +75,6 @@ function uploadFile() {
         console.error('Error:', error);
         fileInfo.innerHTML = '<p class="error">An error occurred while analyzing the file.</p>';
     });
-}
-
-function formatFileSize(sizeInBytes) {
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    let size = parseInt(sizeInBytes);
-    let unitIndex = 0;
-
-    while (size >= 1024 && unitIndex < units.length - 1) {
-        size /= 1024;
-        unitIndex++;
-    }
-
-    return `${size.toFixed(2)} ${units[unitIndex]}`;
 }
 
 function suggestUses(fileType) {

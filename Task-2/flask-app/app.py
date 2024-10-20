@@ -1,7 +1,11 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 import os
+from pathlib import Path
 
 app = Flask(__name__)
+
+# Set the path to the common images directory
+IMAGES_DIR = Path(__file__).parent.parent / 'images'
 
 @app.route('/')
 def index():
@@ -31,7 +35,12 @@ def upload_file():
 
 @app.route('/images/<path:filename>')
 def serve_image(filename):
-    return send_from_directory('images', filename)
+    return send_from_directory(IMAGES_DIR, filename)
+
+@app.route('/check-image/<animal>')
+def check_image(animal):
+    image_path = IMAGES_DIR / f"{animal}.jpg"
+    return jsonify({"exists": image_path.exists()})
 
 if __name__ == '__main__':
     app.run(debug=True)
