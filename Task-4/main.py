@@ -8,12 +8,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 from time import sleep
 import time
+from tqdm import tqdm
 
 # Check CUDA availability
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
+if torch.cuda.is_available():
+    print(f"GPU: {torch.cuda.get_device_name(0)}")
+    print(f"Memory Usage:")
+    print(f"Allocated: {round(torch.cuda.memory_allocated(0)/1024**3,1)} GB")
+    print(f"Cached: {round(torch.cuda.memory_reserved(0)/1024**3,1)} GB")
 
 # Data loading and preprocessing
+print("Loading and preprocessing data...")
 transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.1307,), (0.3081,))
@@ -22,10 +29,12 @@ transform = transforms.Compose([
 train_dataset = datasets.MNIST('./data', train=True, download=True, transform=transform)
 test_dataset = datasets.MNIST('./data', train=False, transform=transform)
 
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=512, shuffle=True)
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1000, shuffle=True)
+print(f"Dataset loaded. Training samples: {len(train_dataset)}, Test samples: {len(test_dataset)}")
 
 # Initialize model, loss, and optimizer
+print("Initializing model...")
 model = MNISTNet().to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
@@ -33,13 +42,15 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 def train(epochs=10):
     train_losses = []
     last_update_time = 0
-    update_interval = 0.5  # Update every 0.5 seconds
+    update_interval = 2.0  # Reduced update frequency to 2 seconds
     
+    print("Starting training...")
     for epoch in range(epochs):
         model.train()
         running_loss = 0.0
         
-        for batch_idx, (data, target) in enumerate(train_loader):
+        pbar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{epochs}')
+        for batch_idx, (data, target) in enumerate(pbar):
             data, target = data.to(device), target.to(device)
             
             optimizer.zero_grad()
@@ -49,10 +60,13 @@ def train(epochs=10):
             optimizer.step()
             
             running_loss += loss.item()
+            avg_loss = running_loss / (batch_idx + 1)
+            
+            # Update progress bar description
+            pbar.set_postfix({'loss': f'{avg_loss:.4f}'})
             
             current_time = time.time()
             if current_time - last_update_time >= update_interval:
-                avg_loss = running_loss / (batch_idx + 1)
                 train_losses.append(avg_loss)
                 
                 # Send data to visualization server
@@ -64,9 +78,11 @@ def train(epochs=10):
                 except:
                     print("Couldn't connect to visualization server")
                 
-                print(f'Epoch: {epoch}, Batch: {batch_idx}, Loss: {avg_loss:.4f}')
                 last_update_time = current_time
+        
+        print(f'Epoch {epoch+1}/{epochs} completed. Average loss: {avg_loss:.4f}')
 
+    print("Training completed!")
     # Send final update
     try:
         requests.post('http://localhost:5000/update', 
@@ -77,6 +93,7 @@ def train(epochs=10):
         print("Couldn't connect to visualization server")
 
 def evaluate_random_samples():
+    print("Evaluating random samples...")
     model.eval()
     data_iterator = iter(test_loader)
     images, labels = next(data_iterator)
@@ -100,8 +117,9 @@ def evaluate_random_samples():
     
     plt.savefig('static/results.png')
     plt.close()
+    print("Evaluation completed. Results saved to 'static/results.png'")
 
 if __name__ == "__main__":
     train(epochs=10)
     time.sleep(1)  # Give time for final update
-    evaluate_random_samples() 
+    evaluate_random_samples()
