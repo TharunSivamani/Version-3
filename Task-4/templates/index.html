@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MNIST Training Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>MNIST Training Monitor</h1>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <h3>Current Epoch</h3>
+                <p id="epoch">-</p>
+            </div>
+            <div class="stat-box">
+                <h3>Current Batch</h3>
+                <p id="batch">-</p>
+            </div>
+            <div class="stat-box">
+                <h3>Current Loss</h3>
+                <p id="loss">-</p>
+            </div>
+        </div>
+        
+        <div id="loss-plot"></div>
+        
+        <div id="results" style="display: none;">
+            <h2>Training Complete</h2>
+            <img src="{{ url_for('static', filename='results.png') }}" alt="Results">
+        </div>
+    </div>
+
+    <script>
+        let lossData = {
+            x: [],
+            y: [],
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Training Loss'
+        };
+
+        let layout = {
+            title: 'Training Loss Over Time',
+            xaxis: { title: 'Steps' },
+            yaxis: { title: 'Loss' }
+        };
+
+        Plotly.newPlot('loss-plot', [lossData], layout);
+
+        function updatePlot() {
+            fetch('/get_loss_history')
+                .then(response => response.json())
+                .then(data => {
+                    const trace = {
+                        x: Array.from({length: data.loss_history.length}, (_, i) => i),
+                        y: data.loss_history,
+                        type: 'scatter',
+                        mode: 'lines'
+                    };
+                    Plotly.react('loss-plot', [trace], layout);
+                });
+        }
+
+        let lastBatch = -1;
+
+        function checkUpdate() {
+            fetch('/get_data')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status !== "no_data") {
+                        document.getElementById('epoch').textContent = data.epoch;
+                        document.getElementById('batch').textContent = data.batch;
+                        document.getElementById('loss').textContent = data.loss.toFixed(4);
+                        
+                        if (data.batch === lastBatch && data.batch !== 0) {
+                            document.getElementById('results').style.display = 'block';
+                        }
+                        lastBatch = data.batch;
+                        
+                        updatePlot();
+                    }
+                });
+        }
+
+        setInterval(checkUpdate, 500);
+    </script>
+</body>
+</html> 
