@@ -1,90 +1,117 @@
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>MNIST Training Monitor</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>MNIST Training Monitor</h1>
-        
-        <div class="stats">
-            <div class="stat-box">
-                <h3>Current Epoch</h3>
-                <p id="epoch">-</p>
-            </div>
-            <div class="stat-box">
-                <h3>Current Batch</h3>
-                <p id="batch">-</p>
-            </div>
-            <div class="stat-box">
-                <h3>Current Loss</h3>
-                <p id="loss">-</p>
-            </div>
+      <h1>MNIST Training Monitor</h1>
+
+      <div class="stats">
+        <div class="stat-box">
+          <h3>Current Epoch</h3>
+          <p id="epoch">-</p>
         </div>
-        
-        <div id="loss-plot"></div>
-        
-        <div id="results" style="display: none;">
-            <h2>Training Complete</h2>
-            <img src="{{ url_for('static', filename='results.png') }}" alt="Results">
+        <div class="stat-box">
+          <h3>Current Batch</h3>
+          <p id="batch">-</p>
         </div>
+        <div class="stat-box">
+          <h3>Current Loss</h3>
+          <p id="loss">-</p>
+        </div>
+        <div class="stat-box">
+          <h3>Current Accuracy</h3>
+          <p id="accuracy">-</p>
+        </div>
+      </div>
+
+      <div id="metrics-plot"></div>
+
+      <div id="results" style="display: none">
+        <h2>Training Complete</h2>
+        <img
+          src="{{ url_for('static', filename='results.png') }}"
+          alt="Results"
+        />
+      </div>
     </div>
 
     <script>
-        let lossData = {
-            x: [],
-            y: [],
-            type: 'scatter',
-            mode: 'lines',
-            name: 'Training Loss'
-        };
+      let layout = {
+        title: "Training Metrics Over Time",
+        xaxis: { title: "Steps" },
+        yaxis: { title: "Loss", side: "left" },
+        yaxis2: {
+          title: "Accuracy (%)",
+          overlaying: "y",
+          side: "right",
+        },
+        showlegend: true,
+      };
 
-        let layout = {
-            title: 'Training Loss Over Time',
-            xaxis: { title: 'Steps' },
-            yaxis: { title: 'Loss' }
-        };
+      function updatePlot() {
+        fetch("/get_loss_history")
+          .then((response) => response.json())
+          .then((data) => {
+            const lossTrace = {
+              x: Array.from({ length: data.loss_history.length }, (_, i) => i),
+              y: data.loss_history,
+              type: "scatter",
+              mode: "lines",
+              name: "Loss",
+              line: { color: "#1f77b4" },
+            };
 
-        Plotly.newPlot('loss-plot', [lossData], layout);
+            const accuracyTrace = {
+              x: Array.from(
+                { length: data.accuracy_history.length },
+                (_, i) => i
+              ),
+              y: data.accuracy_history,
+              type: "scatter",
+              mode: "lines",
+              name: "Accuracy",
+              yaxis: "y2",
+              line: { color: "#2ca02c" },
+            };
 
-        function updatePlot() {
-            fetch('/get_loss_history')
-                .then(response => response.json())
-                .then(data => {
-                    const trace = {
-                        x: Array.from({length: data.loss_history.length}, (_, i) => i),
-                        y: data.loss_history,
-                        type: 'scatter',
-                        mode: 'lines'
-                    };
-                    Plotly.react('loss-plot', [trace], layout);
-                });
-        }
+            Plotly.react("metrics-plot", [lossTrace, accuracyTrace], layout);
+          });
+      }
 
-        let lastBatch = -1;
+      let lastBatch = -1;
 
-        function checkUpdate() {
-            fetch('/get_data')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status !== "no_data") {
-                        document.getElementById('epoch').textContent = data.epoch;
-                        document.getElementById('batch').textContent = data.batch;
-                        document.getElementById('loss').textContent = data.loss.toFixed(4);
-                        
-                        if (data.batch === lastBatch && data.batch !== 0) {
-                            document.getElementById('results').style.display = 'block';
-                        }
-                        lastBatch = data.batch;
-                        
-                        updatePlot();
-                    }
-                });
-        }
+      function checkUpdate() {
+        fetch("/get_data")
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.status !== "no_data") {
+              document.getElementById("epoch").textContent = data.epoch;
+              document.getElementById("batch").textContent = data.batch;
+              document.getElementById("loss").textContent =
+                data.loss.toFixed(4);
+              document.getElementById("accuracy").textContent =
+                data.accuracy.toFixed(2) + "%";
 
-        setInterval(checkUpdate, 500);
+              if (data.batch === lastBatch && data.batch !== 0) {
+                document.getElementById("results").style.display = "block";
+              }
+              lastBatch = data.batch;
+
+              updatePlot();
+            }
+          });
+      }
+
+      // Initialize the plot
+      Plotly.newPlot("metrics-plot", [], layout);
+      setInterval(checkUpdate, 500);
     </script>
-</body>
-</html> 
+  </body>
+</html>

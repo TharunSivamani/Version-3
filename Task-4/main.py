@@ -39,15 +39,18 @@ model = MNISTNet().to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-def train(epochs=10):
+def train(epochs):
     train_losses = []
+    train_accuracies = []
     last_update_time = 0
-    update_interval = 2.0  # Reduced update frequency to 2 seconds
+    update_interval = 2.0
     
     print("Starting training...")
     for epoch in range(epochs):
         model.train()
         running_loss = 0.0
+        running_correct = 0
+        running_total = 0
         
         pbar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{epochs}')
         for batch_idx, (data, target) in enumerate(pbar):
@@ -59,36 +62,53 @@ def train(epochs=10):
             loss.backward()
             optimizer.step()
             
+            # Calculate running loss
             running_loss += loss.item()
             avg_loss = running_loss / (batch_idx + 1)
             
+            # Calculate running accuracy
+            _, predicted = torch.max(output.data, 1)
+            running_total += target.size(0)
+            running_correct += (predicted == target).sum().item()
+            accuracy = 100 * running_correct / running_total
+            
             # Update progress bar description
-            pbar.set_postfix({'loss': f'{avg_loss:.4f}'})
+            pbar.set_postfix({
+                'loss': f'{avg_loss:.4f}',
+                'accuracy': f'{accuracy:.2f}%'
+            })
             
             current_time = time.time()
             if current_time - last_update_time >= update_interval:
                 train_losses.append(avg_loss)
+                train_accuracies.append(accuracy)
                 
                 # Send data to visualization server
                 try:
                     requests.post('http://localhost:5000/update', 
-                                json={'loss': avg_loss, 
-                                     'epoch': epoch,
-                                     'batch': batch_idx})
+                                json={
+                                    'loss': avg_loss,
+                                    'accuracy': accuracy,
+                                    'epoch': epoch,
+                                    'batch': batch_idx
+                                })
                 except:
                     print("Couldn't connect to visualization server")
                 
                 last_update_time = current_time
         
-        print(f'Epoch {epoch+1}/{epochs} completed. Average loss: {avg_loss:.4f}')
+        print(f'Epoch {epoch+1}/{epochs} completed. Average loss: {avg_loss:.4f}, Accuracy: {accuracy:.2f}%')
 
     print("Training completed!")
     # Send final update
     try:
         requests.post('http://localhost:5000/update', 
-                     json={'loss': avg_loss, 
-                          'epoch': epochs-1,
-                          'batch': batch_idx})
+                     json={
+                         'loss': avg_loss,
+                         'accuracy': accuracy,
+                         'epoch': epochs-1,
+                         'batch': batch_idx
+                     })
     except:
         print("Couldn't connect to visualization server")
 
@@ -120,6 +140,6 @@ def evaluate_random_samples():
     print("Evaluation completed. Results saved to 'static/results.png'")
 
 if __name__ == "__main__":
-    train(epochs=10)
+    train(epochs=4)
     time.sleep(1)  # Give time for final update
     evaluate_random_samples()
