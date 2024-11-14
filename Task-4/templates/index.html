@@ -46,13 +46,30 @@
       let layout = {
         title: "Training Metrics Over Time",
         xaxis: { title: "Steps" },
-        yaxis: { title: "Loss", side: "left" },
+        yaxis: {
+          title: "Loss",
+          side: "left",
+          showgrid: true,
+          zeroline: true
+        },
         yaxis2: {
           title: "Accuracy (%)",
           overlaying: "y",
           side: "right",
+          range: [90, 100],
+          showgrid: true,
+          gridcolor: '#f3f3f3',
+          zeroline: false,
+          dtick: 1
         },
         showlegend: true,
+        legend: {
+          x: 1.1,
+          y: 1
+        },
+        margin: {
+          r: 80
+        }
       };
 
       function updatePlot() {
@@ -65,20 +82,17 @@
               type: "scatter",
               mode: "lines",
               name: "Loss",
-              line: { color: "#1f77b4" },
+              line: { color: "#1f77b4" }
             };
 
             const accuracyTrace = {
-              x: Array.from(
-                { length: data.accuracy_history.length },
-                (_, i) => i
-              ),
+              x: Array.from({ length: data.accuracy_history.length }, (_, i) => i),
               y: data.accuracy_history,
               type: "scatter",
               mode: "lines",
               name: "Accuracy",
               yaxis: "y2",
-              line: { color: "#2ca02c" },
+              line: { color: "#2ca02c" }
             };
 
             Plotly.react("metrics-plot", [lossTrace, accuracyTrace], layout);
@@ -94,8 +108,7 @@
             if (data.status !== "no_data") {
               document.getElementById("epoch").textContent = data.epoch;
               document.getElementById("batch").textContent = data.batch;
-              document.getElementById("loss").textContent =
-                data.loss.toFixed(4);
+              document.getElementById("loss").textContent = data.loss.toFixed(4);
               document.getElementById("accuracy").textContent =
                 data.accuracy.toFixed(2) + "%";
 
