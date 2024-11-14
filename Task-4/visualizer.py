@@ -5,7 +5,12 @@ import queue
 app = Flask(__name__)
 
 # Store training data
-training_data = queue.Queue()
+current_data = {
+    "loss": 0,
+    "accuracy": 0,
+    "epoch": 0,
+    "batch": 0
+}
 loss_history = []
 accuracy_history = []
 
@@ -17,10 +22,11 @@ def index():
 def update():
     try:
         data = request.json
+        # Update current data
+        current_data.update(data)
         # Store both loss and accuracy
         loss_history.append(data['loss'])
         accuracy_history.append(data['accuracy'])
-        training_data.put(data)
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error in update: {str(e)}")
@@ -29,9 +35,8 @@ def update():
 @app.route('/get_data')
 def get_data():
     try:
-        if not training_data.empty():
-            data = training_data.get()
-            return jsonify(data)
+        if current_data["epoch"] > 0:  # Only return if we have data
+            return jsonify(current_data)
         return jsonify({"status": "no_data"})
     except Exception as e:
         print(f"Error in get_data: {str(e)}")
@@ -48,14 +53,17 @@ def get_loss_history():
         print(f"Error in get_loss_history: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# Add a route to clear history (useful for multiple training runs)
 @app.route('/clear_history', methods=['POST'])
 def clear_history():
     try:
         loss_history.clear()
         accuracy_history.clear()
-        while not training_data.empty():
-            training_data.get()
+        current_data.update({
+            "loss": 0,
+            "accuracy": 0,
+            "epoch": 0,
+            "batch": 0
+        })
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error in clear_history: {str(e)}")

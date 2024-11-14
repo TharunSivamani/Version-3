@@ -40,10 +40,16 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 def train(epochs):
+    # Clear previous training data
+    try:
+        requests.post('http://localhost:5000/clear_history')
+    except:
+        print("Couldn't connect to visualization server to clear history")
+    
     train_losses = []
     train_accuracies = []
     last_update_time = 0
-    update_interval = 2.0
+    update_interval = 0.5  # 500ms
     
     print("Starting training...")
     for epoch in range(epochs):
@@ -62,55 +68,45 @@ def train(epochs):
             loss.backward()
             optimizer.step()
             
-            # Calculate running loss
+            # Calculate running loss and accuracy
             running_loss += loss.item()
             avg_loss = running_loss / (batch_idx + 1)
             
-            # Calculate running accuracy
             _, predicted = torch.max(output.data, 1)
             running_total += target.size(0)
             running_correct += (predicted == target).sum().item()
             accuracy = 100 * running_correct / running_total
             
-            # Update progress bar description
+            # Update progress bar
             pbar.set_postfix({
                 'loss': f'{avg_loss:.4f}',
                 'accuracy': f'{accuracy:.2f}%'
             })
             
+            # Update visualization
             current_time = time.time()
             if current_time - last_update_time >= update_interval:
-                train_losses.append(avg_loss)
-                train_accuracies.append(accuracy)
+                update_data = {
+                    'loss': float(avg_loss),  # Ensure it's a native Python float
+                    'accuracy': float(accuracy),  # Ensure it's a native Python float
+                    'epoch': epoch + 1,
+                    'batch': batch_idx + 1
+                }
                 
-                # Send data to visualization server
                 try:
-                    requests.post('http://localhost:5000/update', 
-                                json={
-                                    'loss': avg_loss,
-                                    'accuracy': accuracy,
-                                    'epoch': epoch,
-                                    'batch': batch_idx
-                                })
-                except:
-                    print("Couldn't connect to visualization server")
+                    response = requests.post('http://localhost:5000/update', 
+                                          json=update_data,
+                                          timeout=1)
+                    if response.status_code != 200:
+                        print(f"Failed to update visualization: {response.text}")
+                except Exception as e:
+                    print(f"Error updating visualization: {str(e)}")
                 
                 last_update_time = current_time
         
         print(f'Epoch {epoch+1}/{epochs} completed. Average loss: {avg_loss:.4f}, Accuracy: {accuracy:.2f}%')
 
     print("Training completed!")
-    # Send final update
-    try:
-        requests.post('http://localhost:5000/update', 
-                     json={
-                         'loss': avg_loss,
-                         'accuracy': accuracy,
-                         'epoch': epochs-1,
-                         'batch': batch_idx
-                     })
-    except:
-        print("Couldn't connect to visualization server")
 
 def evaluate_random_samples():
     print("Evaluating random samples...")
