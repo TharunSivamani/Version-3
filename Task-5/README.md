@@ -6,48 +6,94 @@ This repository contains a lightweight MNIST model with the following characteri
 - Fully tested with GitHub Actions
 
 ## Model Architecture
-The model uses a simple CNN architecture with:
-- 2 convolutional layers
-- 2 max pooling layers
-- 1 fully connected layer
+The model uses an efficient CNN architecture:
+- Input Block: 1 channel → 8 channels (3x3 conv)
+- Convolution Block 1: 8 → 16 channels (3x3 conv)
+- Transition Block: 16 → 8 channels (1x1 conv)
+- Convolution Block 2: Multiple layers (8 → 16 → 8 → 16 → 16 channels)
+- Output Block: Global Average Pooling → 10 classes
+
+Key features:
+- Uses 1x1 convolutions for channel reduction
+- Employs Global Average Pooling
+- Includes BatchNorm and Dropout
+- No bias in convolutional layers
 
 ## Requirements
-```
+```bash
 pip install -r requirements.txt
 ```
 
 ## Running the Model
-```
+
+1. Train the model:
+```bash
 python mnist_model.py
 ```
 
-## Running Tests
+2. Test the saved model:
+```bash
+python test_saved_model.py
 ```
-pytest test_model.py -v
+
+3. Run advanced tests:
+```bash
+python advanced.py
 ```
 
-## Implementation Details
-- Creates a lightweight CNN model with approximately 8,000 parameters
-- Uses efficient architecture with minimal layers but effective feature extraction
-- Implements GitHub Actions testing for both parameter count and accuracy requirements
-- Includes proper testing infrastructure with pytest
-- Provides complete documentation
+## Testing Framework
 
-## Usage
-1. Create a new GitHub repository
-2. Push all these files to the repository
-3. GitHub Actions will automatically run the tests on push and pull requests
+### Basic Tests
+- Parameter count verification (< 25k)
+- Training accuracy check (> 95%)
+- Model architecture validation
 
-## Model Architecture Details
-- First conv layer: 8 filters (reduces parameters)
-- Second conv layer: 16 filters
-- Single fully connected layer at the end
-- Uses max pooling to reduce spatial dimensions
-- ReLU activation for non-linearity
+### Advanced Tests
+1. Robustness Test:
+   - Performance on noisy images
+   - Minimum 85% accuracy with noise
+
+2. Confidence Test:
+   - Prediction confidence analysis
+   - Average confidence > 0.9
+
+3. Translation Invariance Test:
+   - Performance with image translations
+   - Maximum 5% accuracy drop
+
+4. Digit Consistency Test:
+   - Per-digit accuracy analysis
+   - Balanced performance across all digits
 
 ## CI/CD Pipeline
-The GitHub Actions workflow will:
-1. Set up a Python environment
-2. Install dependencies
-3. Run the tests to verify both requirements (parameter count and accuracy)
+The GitHub Actions workflow:
+1. Pre-test parameter check
+2. Model training and validation
+3. Advanced testing suite
+4. Artifact collection (augmented samples)
+
+## Project Structure
+```
+├── mnist_model.py        # Main model and training
+├── test_model.py         # Basic tests
+├── test_saved_model.py   # Saved model verification
+├── advanced.py           # Advanced testing suite
+├── pre_test.py          # Parameter verification
+├── transforms_config.py  # Data augmentation setup
+├── requirements.txt      # CPU-only dependencies
+└── .github/workflows     # CI/CD configuration
+```
+
+## Data Augmentation
+The model uses several augmentation techniques:
+- Random rotation (±15°)
+- Random affine transformations
+- Random perspective
+- Random erasing
+
+## Model Performance
+- Parameter Count: < 25,000
+- Training Accuracy: > 95% (1 epoch)
+- Test Accuracy: > 90%
+- Robust to noise and translations
 

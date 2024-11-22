@@ -1,6 +1,16 @@
 name: Python MNIST Model
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main, master ]  # specify branches
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [ main, master ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
 
 jobs:
   test:
@@ -34,3 +44,7 @@ jobs:
     - name: Run advanced tests
       run: |
         python advanced.py
+
+    - name: Check workflow status
+      run: |
+        echo "Workflow completed"
